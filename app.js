@@ -1,43 +1,26 @@
-// ============================================================================
-// CANVAS SETUP
-// ============================================================================
+// Bg setup by this
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 canvas.width = window.innerWidth - 80;
 canvas.height = window.innerHeight;
-
-// ============================================================================
-// PHASE 1: NODE DEFINITION & CIRCUIT MANAGER
-// ============================================================================
-
-/**
- * Task 1.1: LogicNode Class
- * Represents a single logic gate node in the circuit.
- * Stores its current state (0 or 1), logic type, and incoming edges.
- */
+// Task 1.1: Node Definition. Create a class LogicNode. It should store its current state
+// (0 or 1), its logic type (AND, OR, etc.), and a list of incomingEdges Acheived by this class
 class LogicNode {
     constructor(type, x, y, id) {
-        this.id = id; // Unique identifier for the node
-        this.type = type; // Logic type: AND, OR, NOT, INPUT, CLK, OFF (probe)
-        this.x = x; // X position on canvas
-        this.y = y; // Y Position on canvas
-        this.width = 80;  // Reduced from 100
-        this.height = 50; // Reduced from 60
-        this.borderRadius = 8; // Slightly smaller radius
-        
-        // Current state of the node (0 or 1)
-        // For INPUT/CLK: user-controlled state
-        // For logic gates: computed output
+        //id,type of gate,width,height of gates,br of gate 
+        this.id = id; 
+        this.type = type; 
+        this.x = x;
+        this.y = y; 
+        this.width = 80;  
+        this.height = 50; 
+        this.borderRadius = 8; 
+       //state setup to 0 and same for edge+ output val initially
         this.state = 0;
-        
-        // List of incoming edges (directed connections from other nodes)
-        this.incomingEdges = []; // Array of {sourceNode, sourcePin, targetPin}
-        
-        // Output value computed by the logic function
+        this.incomingEdges = [];
         this.outputValue = 0;
-        
-        // Input values for logic computation
+        // to calculate LogicNode/logic_func
         this.inputs = this.getInputCount();
         this.outputs = this.getOutputCount();
         this.inputValues = new Array(this.inputs).fill(0);
@@ -47,33 +30,22 @@ class LogicNode {
         this.outputPins = [];
         this.setupPins();
     }
-
-    /**
-     * Determines how many input pins this node type requires
-     */
+//input counter
     getInputCount() {
-        if (this.type === 'INPUT' || this.type === 'CLK') return 0; // No inputs (source nodes)
-        if (this.type === 'OFF') return 1; // Probe with 1 input
-        if (this.type === 'NOT') return 1; // NOT gate has 1 input
-        return 2; // AND, OR, XOR have 2 inputs
+        if (this.type === 'INPUT' || this.type === 'CLK') return 0; 
+        if (this.type === 'OFF') return 1; 
+        if (this.type === 'NOT') return 1; 
+        return 2; 
     }
-
-    /**
-     * Determines how many output pins this node type provides
-     */
+  //output of all node is 1
     getOutputCount() {
         if (this.type === 'OFF') return 0; // Probe has no output (sink node)
         return 1; // All gates have 1 output
     }
-
-    /**
-     * Initialize visual pin positions based on node type
-     */
+// setup pins
     setupPins() {
         this.inputPins = [];
         this.outputPins = [];
-        
-        // OFF node (probe/display) - only has input
         if (this.type === 'OFF') {
             this.inputPins.push({
                 x: this.x,
@@ -81,9 +53,7 @@ class LogicNode {
                 active: false
             });
             return;
-        }
-        
-        // INPUT and CLK - only have output (source nodes)
+        }  
         if (this.type === 'INPUT' || this.type === 'CLK') {
             this.outputPins.push({
                 x: this.x + this.width,
@@ -92,8 +62,6 @@ class LogicNode {
             });
             return;
         }
-        
-        // Standard logic gates - distribute input pins vertically
         const pinSpacing = this.height / (this.inputs + 1);
         for (let i = 0; i < this.inputs; i++) {
             this.inputPins.push({
@@ -102,7 +70,6 @@ class LogicNode {
                 active: false
             });
         }
-        // Single output pin in the middle
         this.outputPins.push({
             x: this.x + this.width,
             y: this.y + this.height / 2,
@@ -110,9 +77,8 @@ class LogicNode {
         });
     }
 
-    /**
-     * Update pin positions after node is moved
-     */
+    
+    //  Update pin positions after node is moved
     updatePinPositions() {
         if (this.type === 'OFF') {
             this.inputPins[0].x = this.x;
@@ -134,39 +100,30 @@ class LogicNode {
         this.outputPins[0].x = this.x + this.width;
         this.outputPins[0].y = this.y + this.height / 2;
     }
-
     /**
      * Compute the output value based on logic type and input values
      * This is called during topological sort evaluation
      */
     computeOutput() {
         if (this.type === 'INPUT' || this.type === 'CLK') {
-            // Source nodes: output their state
             this.outputValue = this.state;
-        } else if (this.type === 'OFF') {
-            // Probe/display: no output
+        } else if (this.type === 'OFF') {  
             this.outputValue = 0;
         } else if (this.type === 'NOT') {
-            // NOT gate: invert input
             this.outputValue = this.inputValues[0] ? 0 : 1;
         } else if (this.type === 'AND') {
-            // AND gate: 1 if both inputs are 1
+            
             this.outputValue = this.inputValues[0] && this.inputValues[1] ? 1 : 0;
         } else if (this.type === 'OR') {
-            // OR gate: 1 if at least one input is 1
+            
             this.outputValue = this.inputValues[0] || this.inputValues[1] ? 1 : 0;
         } else if (this.type === 'XOR') {
-            // XOR gate: 1 if inputs are different
             this.outputValue = this.inputValues[0] !== this.inputValues[1] ? 1 : 0;
         }
-        
-        // Update pin visual states
+        // Update state visuals
         this.updatePinStates();
     }
-
-    /**
-     * Update visual state of pins based on current values
-     */
+   // Update state visuals
     updatePinStates() {
         this.inputPins.forEach((pin, i) => {
             pin.active = this.inputValues[i] === 1;
@@ -175,12 +132,9 @@ class LogicNode {
             pin.active = this.outputValue === 1;
         });
     }
-
-    /**
-     * Render this node on the canvas
-     */
+//showing node on canvas
     draw() {
-        // Highlight if selected for deletion
+        //highlight to del/select for del
         if (selectedForDelete === this) {
             ctx.strokeStyle = '#00bfff';
             ctx.lineWidth = 3;
@@ -188,7 +142,7 @@ class LogicNode {
             ctx.stroke();
         }
         
-        // Draw node body - color based on state
+       //node body+ its color
         if (this.type === 'INPUT') {
             ctx.fillStyle = this.state ? '#4caf50' : '#ffffff';
         } else if (this.type === 'CLK') {
@@ -203,32 +157,25 @@ class LogicNode {
         this.roundRect(this.x, this.y, this.width, this.height, this.borderRadius);
         ctx.fill();
         ctx.stroke();
-
-        // Draw node label
         ctx.fillStyle = '#333';
-        ctx.font = 'bold 14px Arial'; // Slightly smaller font
+        ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
         if (this.type === 'INPUT') {
-            ctx.font = 'bold 26px Arial'; // Reduced from 32px
+            ctx.font = 'bold 26px Arial';
             ctx.fillText(this.state ? '1' : '0', this.x + this.width / 2, this.y + this.height / 2);
         } else if (this.type === 'CLK') {
             ctx.fillText('CLK', this.x + this.width / 2, this.y + this.height / 2);
         } else if (this.type === 'OFF') {
-            ctx.font = 'bold 16px Arial'; // Reduced from 20px
+            ctx.font = 'bold 16px Arial'; 
             ctx.fillText(this.inputValues[0] ? 'ON' : 'OFF', this.x + this.width / 2, this.y + this.height / 2);
         } else {
             ctx.fillText(this.type, this.x + this.width / 2, this.y + this.height / 2);
         }
-
-        // Draw input pins
         this.inputPins.forEach((pin, i) => {
             ctx.beginPath();
-            ctx.arc(pin.x, pin.y, 5, 0, Math.PI * 2); // Reduced from 6
-            
+            ctx.arc(pin.x, pin.y, 5, 0, Math.PI * 2); 
             const isConnected = this.incomingEdges.some(edge => edge.targetPin === i);
-            
             if (isConnected && pin.active) {
                 ctx.fillStyle = '#00bfff';
             } else {
@@ -239,7 +186,6 @@ class LogicNode {
             ctx.lineWidth = 2;
             ctx.stroke();
         });
-
         // Draw output pins
         this.outputPins.forEach((pin, i) => {
             ctx.beginPath();
@@ -272,12 +218,10 @@ class LogicNode {
         ctx.arcTo(x, y, x + radius, y, radius);
         ctx.closePath();
     }
-
     isPointInside(x, y) {
         return x >= this.x && x <= this.x + this.width &&
                y >= this.y && y <= this.y + this.height;
     }
-
     getPinAt(x, y) {
         for (let i = 0; i < this.inputPins.length; i++) {
             const pin = this.inputPins[i];
@@ -296,16 +240,13 @@ class LogicNode {
         return null;
     }
 }
-
-/**
- * Represents a directed edge (wire) between two nodes
- */
+//wire/connector/edge
 class DirectedEdge {
     constructor(sourceNode, sourcePin, targetNode, targetPin) {
-        this.sourceNode = sourceNode; // Output node
-        this.sourcePin = sourcePin;   // Output pin index
-        this.targetNode = targetNode; // Input node
-        this.targetPin = targetPin;   // Input pin index
+        this.sourceNode = sourceNode; 
+        this.sourcePin = sourcePin; 
+        this.targetNode = targetNode; 
+        this.targetPin = targetPin;   
     }
 
     draw() {
@@ -404,41 +345,34 @@ class DirectedEdge {
     }
 }
 
-/**
- * Task 1.2: Circuit Manager Class
- * Central manager for all nodes and connections.
- * Implements observer pattern and topological sort.
- */
+// Topological Sorting: To simulate the circuit correctly.........
+// 3. Observer Pattern: The UI and the Logic Engine are decoupled. When a component’s.............
+
 class Circuit {
     constructor() {
-        this.nodes = new Map(); // Map<id, LogicNode>
-        this.edges = []; // Array of DirectedEdge
-        this.nextNodeId = 0; // Auto-increment ID for nodes
-        this.observers = []; // List of CircuitObserver instances
+        this.nodes = new Map(); 
+        this.edges = []; 
+        this.nextNodeId = 0; 
+        this.observers = []; 
     }
 
-    /**
-     * Add a new node to the circuit
-     */
+   //new node
     addNode(type, x, y) {
         const node = new LogicNode(type, x, y, this.nextNodeId++);
         this.nodes.set(node.id, node);
         return node;
     }
-
-    /**
-     * Remove a node and all connected edges
-     */
+// remove node
     removeNode(node) {
-        // Remove all edges connected to this node
+    
         this.edges = this.edges.filter(edge => 
             edge.sourceNode !== node && edge.targetNode !== node
         );
-        // Remove from incoming edges of other nodes
+       
         this.nodes.forEach(n => {
             n.incomingEdges = n.incomingEdges.filter(e => e.sourceNode !== node);
         });
-        // Remove the node itself
+       
         this.nodes.delete(node.id);
     }
 
@@ -707,10 +641,6 @@ class Circuit {
     }
 }
 
-/**
- * Task 3.1: Observer Interface
- * Defines the contract for observers that react to circuit changes
- */
 class CircuitObserver {
     /**
      * Called when the circuit state changes
@@ -721,10 +651,7 @@ class CircuitObserver {
     }
 }
 
-/**
- * Canvas Renderer Observer
- * Handles all UI rendering in response to circuit changes
- */
+//canva renderor 
 class CanvasRenderer extends CircuitObserver {
     constructor(canvas, ctx) {
         super();
@@ -732,28 +659,143 @@ class CanvasRenderer extends CircuitObserver {
         this.ctx = ctx;
     }
 
-    /**
-     * Task 3.3: Decoupled Rendering
-     * Triggered by circuit notifications, not directly by simulation
-     */
     update(circuit) {
-        // Rendering happens in the main draw loop
-        // This ensures UI updates are synchronized with circuit state
+        
     }
 }
+class PackManager {
+    constructor() {
+        this.packs = this.loadPacksFromStorage();
+        this.updatePacksList();
+    }
+    loadPacksFromStorage() {
+        const stored = localStorage.getItem('circuitPacks');
+        return stored ? JSON.parse(stored) : [];
+    }
+   //save pack to local storage
+    savePacksToStorage() {
+        localStorage.setItem('circuitPacks', JSON.stringify(this.packs));
+    }
+// save current circuit as pack
+    saveCircuitAsPack() {
+        // Check if there are any nodes in the circuit
+        if (circuit.nodes.size === 0) {
+            alert('No circuit to save! Please create a circuit first.');
+            return;
+        }
+        // Prompt for pack name
+        let packName = prompt('Enter a name for this pack (leave empty for auto-naming):');
+    
+        // Auto-generate name if empty
+        if (!packName || packName.trim() === '') {
+            let packNumber = 1;
+            while (this.packs.some(p => p.name === `Pack ${packNumber}`)) {
+                packNumber++;
+            }
+            packName = `Pack ${packNumber}`;
+        } else {
+            packName = packName.trim();
+        }
+        // Check for duplicate names
+        if (this.packs.some(p => p.name === packName)) {
+            const overwrite = confirm(`A pack named "${packName}" already exists. Overwrite?`);
+            if (!overwrite) return;
+            // Remove existing pack
+            this.packs = this.packs.filter(p => p.name !== packName);
+        }
+        // Serialize current circuit
+        const circuitData = circuit.serializeToJSON();
+        // Create pack object
+        const pack = {
+            name: packName,
+            data: circuitData,
+            timestamp: new Date().toISOString(),
+            nodeCount: circuit.nodes.size,
+            edgeCount: circuit.edges.length
+        };
+        // Add to packs array
+        this.packs.push(pack);
+        // Save to localStorage
+        this.savePacksToStorage();
+        // Update UI
+        this.updatePacksList();
+        
+        alert(`Pack "${packName}" saved successfully!`);
+    }
 
-// ============================================================================
-// GLOBAL STATE & INITIALIZATION
-// ============================================================================
+    
+     //Load a pack into the current circuit
+     
+    loadPack(packName) {
+        const pack = this.packs.find(p => p.name === packName);
+        if (!pack) {
+            alert('Pack not found!');
+            return;
+        }
 
-// Create the circuit manager instance
+        // Confirm if current circuit exists
+        if (circuit.nodes.size > 0) {
+            const confirm = window.confirm(`Loading this pack will replace the current circuit. Continue?`);
+            if (!confirm) return;
+        }
+
+        try {
+            circuit.deserializeFromJSON(pack.data); 
+            // Reset UI state
+            selectedForDelete = null;
+            selectedConnection = null;
+            console.log(`Pack "${packName}" loaded successfully!`);
+        } catch (error) {
+            alert('Error loading pack: ' + error.message);
+            console.error('Pack load error:', error);
+        }
+    }
+// Delete a pack
+    deletePack(packName) {
+        const confirmDelete = confirm(`Are you sure you want to delete pack "${packName}"?`);
+        if (!confirmDelete) return;
+        this.packs = this.packs.filter(p => p.name !== packName);
+        this.savePacksToStorage();
+        this.updatePacksList();
+    }
+    //Update the packs list in the sidebar
+    updatePacksList() {
+        const packsList = document.getElementById('packsList');
+        packsList.innerHTML = '';
+        // Display packs in reverse order (latest first)
+        const reversedPacks = [...this.packs].reverse();
+        reversedPacks.forEach(pack => {
+            const packItem = document.createElement('div');
+            packItem.className = 'pack-item';
+
+            const packInfo = document.createElement('div');
+            packInfo.className = 'pack-name';
+            packInfo.textContent = pack.name;
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'pack-delete';
+            deleteBtn.textContent = '×';
+            deleteBtn.title = 'Delete pack';
+            
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deletePack(pack.name);
+            });
+            
+            packItem.appendChild(packInfo);
+            packItem.appendChild(deleteBtn);
+            // Load pack on click
+            packItem.addEventListener('click', () => {
+                this.loadPack(pack.name);
+            });
+            
+            packsList.appendChild(packItem);
+        })}}
 const circuit = new Circuit();
 
-// Create and subscribe the renderer observer
 const canvasRenderer = new CanvasRenderer(canvas, ctx);
 circuit.subscribe(canvasRenderer);
 
-// UI state variables
 let selectedPin = null;
 let tempConnection = null;
 let draggedNode = null;
@@ -763,28 +805,18 @@ let hoveredPin = null;
 let isConnecting = false;
 let selectedConnection = null;
 
-// Simulation control
 let isSimulationRunning = false;
 
-// CLK auto-toggle
 let clkInterval = null;
-
-// ============================================================================
-// RENDERING & ANIMATION LOOP
-// ============================================================================
-
-/**
- * Main draw function - renders the entire circuit state
- * Called continuously via requestAnimationFrame
- */
+//main draw which render whole circuit
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw dull white background
+    //bg
     ctx.fillStyle = '#F5F6FA';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw dotted grid pattern - closer together and subtle
+//breadboard like patern
     ctx.fillStyle = '#dcdde1';
     for (let x = 12; x < canvas.width; x += 12) {
         for (let y = 12; y < canvas.height; y += 12) {
@@ -794,7 +826,7 @@ function draw() {
         }
     }
     
-    // Draw all edges (connections)
+    // edges draw
     circuit.edges.forEach(edge => edge.draw());
     
     // Draw temporary connection during wire creation
@@ -855,13 +887,7 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// ============================================================================
-// USER INTERFACE EVENT HANDLERS
-// ============================================================================
-
-/**
- * Handle drag-and-drop from sidebar to add new nodes
- */
+//drag and drop
 document.querySelectorAll('.gate-btn').forEach(btn => {
     btn.addEventListener('dragstart', (e) => {
         const gateType = btn.getAttribute('data-gate');
@@ -898,9 +924,7 @@ canvas.addEventListener('drop', (e) => {
     }
 });
 
-/**
- * Toolbar button handlers
- */
+//navbar btn handler run,save laod etc
 document.getElementById('runBtn').addEventListener('click', () => {
     isSimulationRunning = !isSimulationRunning;
     
@@ -930,20 +954,18 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
     if (file) {
         loadCircuit(file);
     }
-    e.target.value = ''; // Reset for re-loading same file
+    e.target.value = ''; 
 });
 
 document.getElementById('savePackBtn').addEventListener('click', () => {
     packManager.saveCircuitAsPack();
 });
 
-/**
- * Task 4.1: Save circuit to JSON file
- */
+// saving data into json
 function saveCircuit() {
     const jsonString = circuit.serializeToJSON();
     
-    // Create downloadable file
+    
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -955,9 +977,6 @@ function saveCircuit() {
     URL.revokeObjectURL(url);
 }
 
-/**
- * Load circuit from JSON file
- */
 function loadCircuit(file) {
     const reader = new FileReader();
     
@@ -983,20 +1002,15 @@ function loadCircuit(file) {
     reader.readAsText(file);
 }
 
-/**
- * Keyboard shortcuts - Delete key removes selected elements
- */
+//keyboard shorcuts
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedForDelete) {
-            // Remove node and all connected edges
+         
             circuit.removeNode(selectedForDelete);
             selectedForDelete = null;
-            if (isSimulationRunning) {
-                circuit.simulate();
-            }
+            if (isSimulationRunning) { circuit.simulate(); }
         } else if (selectedConnection) {
-            // Remove edge
             circuit.removeEdge(selectedConnection);
             selectedConnection = null;
             if (isSimulationRunning) {
@@ -1005,20 +1019,13 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
-// ============================================================================
-// MOUSE INTERACTION HANDLERS
-// ============================================================================
-
-/**
- * Mouse down - Start connection, drag node, or select element
- */
+//mouse connection when when i click pin,i then control edge through mouse
 canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Check if clicking on a pin
+    // connect if pin is on output
     let clickedPin = null;
     for (let node of circuit.nodes.values()) {
         const pin = node.getPinAt(x, y);
@@ -1042,7 +1049,6 @@ canvas.addEventListener('mousedown', (e) => {
         canvas.style.cursor = 'crosshair';
         return;
     }
-    
     // Check for node dragging (if not connecting)
     if (!isConnecting) {
         for (let node of circuit.nodes.values()) {
@@ -1060,7 +1066,6 @@ canvas.addEventListener('mousedown', (e) => {
                 }
             }
         }
-        
         // Check if clicking on an edge
         for (let edge of circuit.edges) {
             if (edge.isPointNear(x, y)) {
@@ -1069,7 +1074,6 @@ canvas.addEventListener('mousedown', (e) => {
                 return;
             }
         }
-        
         // Deselect if clicking empty space
         selectedForDelete = null;
         selectedConnection = null;
@@ -1166,18 +1170,12 @@ canvas.addEventListener('mouseup', (e) => {
     }
 });
 
-/**
- * Mouse click - Toggle INPUT/CLK node states
- */
+//toggle input state
 canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    // Don't process click if we just finished dragging
     if (draggedNode) return;
-    
-    // Check if clicking on a node
     let clickedNode = null;
     for (let node of circuit.nodes.values()) {
         if (node.isPointInside(x, y)) {
@@ -1185,205 +1183,25 @@ canvas.addEventListener('click', (e) => {
             break;
         }
     }
-    
-    // Only toggle INPUT state on click - CLK is automatic only
+
     if (clickedNode && clickedNode.type === 'INPUT') {
         clickedNode.state = clickedNode.state ? 0 : 1;
-        // Only trigger simulation if running
+       
         if (isSimulationRunning) {
             circuit.simulate();
         }
     }
-    // CLK nodes cannot be manually toggled
 });
-
-/**
- * Window resize handler
- */
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth - 80;
     canvas.height = window.innerHeight;
 });
-
-/**
- * Pack Manager - Handles saving and loading circuit packs
- */
-class PackManager {
-    constructor() {
-        this.packs = this.loadPacksFromStorage();
-        this.updatePacksList();
-    }
-
-    /**
-     * Load all saved packs from localStorage
-     */
-    loadPacksFromStorage() {
-        const stored = localStorage.getItem('circuitPacks');
-        return stored ? JSON.parse(stored) : [];
-    }
-
-    /**
-     * Save packs to localStorage
-     */
-    savePacksToStorage() {
-        localStorage.setItem('circuitPacks', JSON.stringify(this.packs));
-    }
-
-    /**
-     * Save current circuit as a pack
-     */
-    saveCircuitAsPack() {
-        // Check if there are any nodes in the circuit
-        if (circuit.nodes.size === 0) {
-            alert('No circuit to save! Please create a circuit first.');
-            return;
-        }
-
-        // Prompt for pack name
-        let packName = prompt('Enter a name for this pack (leave empty for auto-naming):');
-        
-        // Auto-generate name if empty
-        if (!packName || packName.trim() === '') {
-            let packNumber = 1;
-            while (this.packs.some(p => p.name === `Pack ${packNumber}`)) {
-                packNumber++;
-            }
-            packName = `Pack ${packNumber}`;
-        } else {
-            packName = packName.trim();
-        }
-
-        // Check for duplicate names
-        if (this.packs.some(p => p.name === packName)) {
-            const overwrite = confirm(`A pack named "${packName}" already exists. Overwrite?`);
-            if (!overwrite) return;
-            // Remove existing pack
-            this.packs = this.packs.filter(p => p.name !== packName);
-        }
-
-        // Serialize current circuit
-        const circuitData = circuit.serializeToJSON();
-        
-        // Create pack object
-        const pack = {
-            name: packName,
-            data: circuitData,
-            timestamp: new Date().toISOString(),
-            nodeCount: circuit.nodes.size,
-            edgeCount: circuit.edges.length
-        };
-
-        // Add to packs array
-        this.packs.push(pack);
-        
-        // Save to localStorage
-        this.savePacksToStorage();
-        
-        // Update UI
-        this.updatePacksList();
-        
-        alert(`Pack "${packName}" saved successfully!`);
-    }
-
-    /**
-     * Load a pack into the current circuit
-     */
-    loadPack(packName) {
-        const pack = this.packs.find(p => p.name === packName);
-        if (!pack) {
-            alert('Pack not found!');
-            return;
-        }
-
-        // Confirm if current circuit exists
-        if (circuit.nodes.size > 0) {
-            const confirm = window.confirm(`Loading this pack will replace the current circuit. Continue?`);
-            if (!confirm) return;
-        }
-
-        try {
-            circuit.deserializeFromJSON(pack.data);
-            
-            // Reset UI state
-            selectedForDelete = null;
-            selectedConnection = null;
-            
-            console.log(`Pack "${packName}" loaded successfully!`);
-        } catch (error) {
-            alert('Error loading pack: ' + error.message);
-            console.error('Pack load error:', error);
-        }
-    }
-
-    /**
-     * Delete a pack
-     */
-    deletePack(packName) {
-        const confirmDelete = confirm(`Are you sure you want to delete pack "${packName}"?`);
-        if (!confirmDelete) return;
-
-        this.packs = this.packs.filter(p => p.name !== packName);
-        this.savePacksToStorage();
-        this.updatePacksList();
-    }
-
-    /**
-     * Update the packs list in the sidebar
-     */
-    updatePacksList() {
-        const packsList = document.getElementById('packsList');
-        packsList.innerHTML = '';
-
-        // Display packs in reverse order (latest first)
-        const reversedPacks = [...this.packs].reverse();
-
-        reversedPacks.forEach(pack => {
-            const packItem = document.createElement('div');
-            packItem.className = 'pack-item';
-            
-            const packInfo = document.createElement('div');
-            packInfo.className = 'pack-name';
-            packInfo.textContent = pack.name;
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'pack-delete';
-            deleteBtn.textContent = '×';
-            deleteBtn.title = 'Delete pack';
-            
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.deletePack(pack.name);
-            });
-            
-            packItem.appendChild(packInfo);
-            packItem.appendChild(deleteBtn);
-            
-            // Load pack on click
-            packItem.addEventListener('click', () => {
-                this.loadPack(pack.name);
-            });
-            
-            packsList.appendChild(packItem);
-        });
-    }
-}
-
-// Initialize pack manager
 const packManager = new PackManager();
-
-// ============================================================================
-// START APPLICATION
-// ============================================================================
-
-// Start the animation loop
+// app start
 draw();
-
-/**
- * Start automatic CLK toggle
- */
+// clk automatic toggle per sec
 function startClockToggle() {
-    stopClockToggle(); // Clear any existing interval
-    
+    stopClockToggle();l
     clkInterval = setInterval(() => {
         if (isSimulationRunning) {
             // Toggle all CLK nodes
@@ -1392,15 +1210,10 @@ function startClockToggle() {
                     node.state = node.state ? 0 : 1;
                 }
             });
-            // Simulate the circuit with new CLK states
             circuit.simulate();
         }
-    }, 500); // Toggle every 0.5 seconds (500ms)
+    }, 500); 
 }
-
-/**
- * Stop automatic CLK toggle
- */
 function stopClockToggle() {
     if (clkInterval) {
         clearInterval(clkInterval);
