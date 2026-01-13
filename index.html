@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.8">
+    <title>DLD Logic Simulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h3>IO</h3>
+            <div class="gate-btn" draggable="true" data-gate="INPUT" data-tooltip="Input Switch">
+                <span>🔘</span>
+            </div>
+            <div class="gate-btn" draggable="true" data-gate="CLK" data-tooltip="Clock Signal">
+                <span>⏰</span>
+            </div>
+            <div class="gate-btn" draggable="true" data-gate="OFF" data-tooltip="Output Probe">
+                <span>💡</span>
+            </div>
+
+            <h3>Gates</h3>
+            <div class="gate-btn" draggable="true" data-gate="NOT" data-tooltip="NOT Gate (Inverter)">
+                <span>◐</span>
+            </div>
+            <div class="gate-btn" draggable="true" data-gate="AND" data-tooltip="AND Gate">
+                <span>∧</span>
+            </div>
+            <div class="gate-btn" draggable="true" data-gate="OR" data-tooltip="OR Gate">
+                <span>∨</span>
+            </div>
+            <div class="gate-btn" draggable="true" data-gate="XOR" data-tooltip="XOR Gate">
+                <span>⊕</span>
+            </div>
+
+            <div class="packs-section">
+                <h3>Packs</h3>
+                <div id="packsList"></div>
+            </div>
+        </div>
+        <div class="main">
+            <div class="toolbar">
+                <button id="runBtn" class="action-btn run">▶ Run</button>
+                <button id="savePackBtn" class="action-btn save-pack">📦 Pack</button>
+                <button id="saveBtn" class="action-btn save">💾 Save</button>
+                <button id="loadBtn" class="action-btn load">📁 Load</button>
+                <input type="file" id="fileInput" accept=".json" style="display: none;">
+            </div>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+
+</html>
