@@ -53,10 +53,27 @@ let isSelectingArea = false;
 let selectionStart = { x: 0, y: 0 };
 let selectionRect = null;
 
+let draggedNodes = null;
+let dragOffsets = new Map();
+
+let lastMousePos = { x: 0, y: 0 };
+
 let isSimulationRunning = false;
 
 let clkInterval = null;
 const packManager = new PackManager(circuit);
+
+function setPackDropToCenter() {
+    const SIDEBAR_WIDTH = 80;
+    const center = { 
+        x: (canvas.width / 2) + (SIDEBAR_WIDTH / 2),
+        y: canvas.height / 2 
+    };
+    lastMousePos = center;
+    packManager.setDropPoint(center);
+}
+
+setPackDropToCenter();
 
 //main draw which render whole circuit
 function draw() {
@@ -275,8 +292,16 @@ function loadCircuit(file) {
 //keyboard shorcuts
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedNodes.size > 0) {
+            const toRemove = Array.from(selectedNodes);
+            toRemove.forEach(node => circuit.removeNode(node));
+            selectedNodes.clear();
+            selectedForDelete = null;
+            selectedConnection = null;
+            if (isSimulationRunning) { circuit.simulate(); }
+            return;
+        }
         if (selectedForDelete) {
-         
             circuit.removeNode(selectedForDelete);
             selectedForDelete = null;
             if (isSimulationRunning) { circuit.simulate(); }
@@ -326,6 +351,18 @@ canvas.addEventListener('mousedown', (e) => {
             if (node.isPointInside(x, y)) {
                 const pin = node.getPinAt(x, y);
                 if (!pin) {
+                    if (selectedNodes.has(node) && selectedNodes.size > 1) {
+                        draggedNodes = [...selectedNodes];
+                        dragOffsets.clear();
+                        draggedNodes.forEach(n => {
+                            dragOffsets.set(n, { x: x - n.x, y: y - n.y });
+                        });
+                        selectedForDelete = node;
+                        selectedConnection = null;
+                        canvas.style.cursor = 'move';
+                        return;
+                    }
+
                     draggedNode = node;
                     selectedNodes.clear();
                     selectedNodes.add(node);
@@ -364,8 +401,19 @@ canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
-    if (draggedNode) {
+
+    lastMousePos = { x, y };
+    packManager.setDropPoint(lastMousePos);
+
+    if (draggedNodes) {
+        draggedNodes.forEach(n => {
+            const off = dragOffsets.get(n);
+            n.x = x - off.x;
+            n.y = y - off.y;
+            n.updatePinPositions();
+        });
+        hoveredPin = null;
+    } else if (draggedNode) {
         // Update node position while dragging
         draggedNode.x = x - dragOffset.x;
         draggedNode.y = y - dragOffset.y;
@@ -452,6 +500,12 @@ canvas.addEventListener('mouseup', (e) => {
         canvas.style.cursor = 'default';
     }
     
+    if (draggedNodes) {
+        draggedNodes = null;
+        dragOffsets.clear();
+        canvas.style.cursor = 'default';
+    }
+
     if (draggedNode) {
         draggedNode = null;
         canvas.style.cursor = 'default';
@@ -503,6 +557,7 @@ canvas.addEventListener('click', (e) => {
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth - 80;
     canvas.height = window.innerHeight;
+    setPackDropToCenter();
 });
 // app start
 draw();
@@ -528,4 +583,4 @@ function stopClockToggle() {
         clkInterval = null;
     }
 }
-}); // End of DOMContentLoaded
+}); 

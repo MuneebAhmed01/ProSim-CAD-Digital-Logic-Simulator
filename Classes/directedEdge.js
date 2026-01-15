@@ -7,24 +7,24 @@ export class DirectedEdge {
         this.targetPin = targetPin;   
     }
 
-    draw() {
+    draw(ctx, selectedConnection) {
+        const c = ctx || (typeof window !== 'undefined' ? window.ctx : null);
+        if (!c) return;
+
         const from = this.sourceNode.outputPins[this.sourcePin];
         const to = this.targetNode.inputPins[this.targetPin];
-        
-        // Color based on signal value
+
         const color = this.sourceNode.outputValue ? '#4caf50' : '#f44336';
-        
-        this.drawSmartLine(from.x, from.y, to.x, to.y, color);
-        
-        // Highlight if selected
+        this.drawSmartLine(c, from.x, from.y, to.x, to.y, color, selectedConnection);
+
         if (selectedConnection === this) {
-            ctx.strokeStyle = '#00bfff';
-            ctx.lineWidth = 5;
-            this.drawSmartLine(from.x, from.y, to.x, to.y, '#00bfff');
+            c.strokeStyle = '#00bfff';
+            c.lineWidth = 5;
+            this.drawSmartLine(c, from.x, from.y, to.x, to.y, '#00bfff', selectedConnection);
         }
     }
 
-    drawSmartLine(x1, y1, x2, y2, color) {
+    drawSmartLine(ctx, x1, y1, x2, y2, color, selectedConnection) {
         ctx.strokeStyle = color;
         ctx.lineWidth = selectedConnection === this ? 5 : 2.5;
         

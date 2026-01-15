@@ -188,6 +188,7 @@ body {
   width: 100%;
   height: 100%;
   background: #F5F6FA;
+  display: block;  /* Add this line */
 }
 
 #canvas.connecting {
