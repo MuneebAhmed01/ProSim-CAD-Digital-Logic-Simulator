@@ -48,9 +48,16 @@ let hoveredPin = null;
 let isConnecting = false;
 let selectedConnection = null;
 
+let selectedNodes = new Set();
+let isSelectingArea = false;
+let selectionStart = { x: 0, y: 0 };
+let selectionRect = null;
+
 let isSimulationRunning = false;
 
 let clkInterval = null;
+const packManager = new PackManager(circuit);
+
 //main draw which render whole circuit
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -107,8 +114,17 @@ function draw() {
     
     // Draw all nodes - pass circuit reference
     circuit.nodes.forEach(node => {
-        node.draw(ctx, node === selectedForDelete, circuit);
+        node.draw(ctx, selectedNodes.has(node), circuit);
     });
+
+    // Draw selection rectangle
+    if (isSelectingArea && selectionRect) {
+        ctx.strokeStyle = '#00bfff';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(selectionRect.x, selectionRect.y, selectionRect.w, selectionRect.h);
+        ctx.setLineDash([]);
+    }
     
     // Draw hover indicator on pins
     if (hoveredPin && !draggedNode && !isConnecting) {
@@ -205,7 +221,14 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
 });
 
 document.getElementById('savePackBtn').addEventListener('click', () => {
-    packManager.saveCircuitAsPack();
+    if (selectedNodes.size === 0) {
+        const btn = document.getElementById('savePackBtn');
+        const prev = btn.textContent;
+        btn.textContent = 'No component selected';
+        setTimeout(() => { btn.textContent = prev; }, 1200);
+        return;
+    }
+    packManager.saveSelectionAsPack(selectedNodes);
 });
 
 // saving data into json
@@ -296,14 +319,16 @@ canvas.addEventListener('mousedown', (e) => {
         canvas.style.cursor = 'crosshair';
         return;
     }
+
     // Check for node dragging (if not connecting)
     if (!isConnecting) {
         for (let node of circuit.nodes.values()) {
             if (node.isPointInside(x, y)) {
                 const pin = node.getPinAt(x, y);
                 if (!pin) {
-                    // Start dragging node
                     draggedNode = node;
+                    selectedNodes.clear();
+                    selectedNodes.add(node);
                     selectedForDelete = node;
                     selectedConnection = null;
                     dragOffset.x = x - node.x;
@@ -318,12 +343,17 @@ canvas.addEventListener('mousedown', (e) => {
             if (edge.isPointNear(x, y)) {
                 selectedConnection = edge;
                 selectedForDelete = null;
+                selectedNodes.clear();
                 return;
             }
         }
-        // Deselect if clicking empty space
+        // Start selection rectangle on empty space
         selectedForDelete = null;
         selectedConnection = null;
+        selectedNodes.clear();
+        isSelectingArea = true;
+        selectionStart = { x, y };
+        selectionRect = { x, y, w: 0, h: 0 };
     }
 });
 
@@ -341,6 +371,17 @@ canvas.addEventListener('mousemove', (e) => {
         draggedNode.y = y - dragOffset.y;
         draggedNode.updatePinPositions();
         hoveredPin = null;
+    } else if (isSelectingArea && selectionRect) {
+        const x1 = selectionStart.x;
+        const y1 = selectionStart.y;
+        const x2 = x;
+        const y2 = y;
+        selectionRect.x = Math.min(x1, x2);
+        selectionRect.y = Math.min(y1, y2);
+        selectionRect.w = Math.abs(x2 - x1);
+        selectionRect.h = Math.abs(y2 - y1);
+        hoveredPin = null;
+        canvas.style.cursor = 'default';
     } else if (isConnecting && tempConnection) {
         // Update temporary connection preview
         tempConnection.x2 = x;
@@ -415,6 +456,26 @@ canvas.addEventListener('mouseup', (e) => {
         draggedNode = null;
         canvas.style.cursor = 'default';
     }
+
+    if (isSelectingArea && selectionRect) {
+        const rx = selectionRect.x;
+        const ry = selectionRect.y;
+        const rw = selectionRect.w;
+        const rh = selectionRect.h;
+
+        selectedNodes.clear();
+        for (let node of circuit.nodes.values()) {
+            const within =
+                node.x >= rx &&
+                node.y >= ry &&
+                node.x + node.width <= rx + rw &&
+                node.y + node.height <= ry + rh;
+            if (within) selectedNodes.add(node);
+        }
+
+        isSelectingArea = false;
+        selectionRect = null;
+    }
 });
 
 //toggle input state
@@ -422,7 +483,7 @@ canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    if (draggedNode) return;
+    if (draggedNode || isSelectingArea) return;
     let clickedNode = null;
     for (let node of circuit.nodes.values()) {
         if (node.isPointInside(x, y)) {
@@ -443,7 +504,6 @@ window.addEventListener('resize', () => {
     canvas.width = window.innerWidth - 80;
     canvas.height = window.innerHeight;
 });
-const packManager = new PackManager(circuit);
 // app start
 draw();
 

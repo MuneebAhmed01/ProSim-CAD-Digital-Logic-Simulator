@@ -125,4 +125,75 @@ export class PackManager {
             });
             
             packsList.appendChild(packItem);
-        })}}
+        })}
+        saveSelectionAsPack(selectedNodes) {
+            const selectedIds = new Set([...selectedNodes].map(n => n.id));
+            if (selectedIds.size === 0) {
+                alert('No component selected!');
+                return;
+            }
+
+            let packName = prompt('Enter a name for this pack (leave empty for auto-naming):');
+            if (!packName || packName.trim() === '') {
+                let packNumber = 1;
+                while (this.packs.some(p => p.name === `Pack ${packNumber}`)) {
+                    packNumber++;
+                }
+                packName = `Pack ${packNumber}`;
+            } else {
+                packName = packName.trim();
+            }
+
+            if (this.packs.some(p => p.name === packName)) {
+                const overwrite = confirm(`A pack named "${packName}" already exists. Overwrite?`);
+                if (!overwrite) return;
+                this.packs = this.packs.filter(p => p.name !== packName);
+            }
+
+            const nodesData = [];
+            selectedIds.forEach(id => {
+                const node = this.circuit.nodes.get(id);
+                if (node) {
+                    nodesData.push({
+                        id: node.id,
+                        type: node.type,
+                        x: node.x,
+                        y: node.y,
+                        state: node.state
+                    });
+                }
+            });
+
+            const edgesData = this.circuit.edges
+                .filter(edge => selectedIds.has(edge.sourceNode.id) && selectedIds.has(edge.targetNode.id))
+                .map(edge => ({
+                    sourceId: edge.sourceNode.id,
+                    sourcePin: edge.sourcePin,
+                    targetId: edge.targetNode.id,
+                    targetPin: edge.targetPin
+                }));
+
+            const maxId = nodesData.reduce((m, n) => Math.max(m, n.id), -1);
+            const circuitData = JSON.stringify({
+                version: "2.0",
+                timestamp: new Date().toISOString(),
+                nextNodeId: maxId + 1,
+                nodes: nodesData,
+                edges: edgesData
+            }, null, 2);
+
+            const pack = {
+                name: packName,
+                data: circuitData,
+                timestamp: new Date().toISOString(),
+                nodeCount: nodesData.length,
+                edgeCount: edgesData.length
+            };
+
+            this.packs.push(pack);
+            this.savePacksToStorage();
+            this.updatePacksList();
+
+            alert(`Pack "${packName}" saved successfully!`);
+        }
+}
